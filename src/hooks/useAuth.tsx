@@ -10,6 +10,9 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, isAdmin?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  isAdmin: (userProfile: any) => boolean;
+  isSuperAdmin: (userProfile: any) => boolean;
+  isCategoryAdmin: (userProfile: any, category: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,9 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fullName: string,
     isAdmin: boolean = false
   ) => {
-    const redirectUrl = `${window.location.origin}/`;
+    // Use environment variable or fallback to current origin
+    const redirectUrl = import.meta.env.VITE_SUPABASE_REDIRECT_URL || window.location.origin;
     
-    const { error } = await supabase.auth.signUp({
+    console.log('Signing up user:', email, 'with redirect URL:', redirectUrl);
+    
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -110,7 +116,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return { error };
+    if (error) {
+      console.error('Sign up error:', error);
+      return { error };
+    }
+
+    if (data.user) {
+      console.log('User created successfully:', data.user.id);
+      
+      // Create profile immediately (don't wait for email verification)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: data.user.id,
+          email: email,
+          full_name: fullName,
+          role: isAdmin ? 'admin' : 'user'
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        return { error: profileError };
+      }
+    }
+
+    return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
@@ -131,6 +161,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isAdmin = (userProfile: any) => {
+    return userProfile?.role === 'admin';
+  };
+
+  const isSuperAdmin = (userProfile: any) => {
+    return userProfile?.role === 'super_admin';
+  };
+
+  const isCategoryAdmin = (userProfile: any, category: string) => {
+    const categoryRoleMap = {
+      'IT': 'it_admin',
+      'Maintenance': 'maintenance_admin', 
+      'Housekeeping': 'housekeeping_admin'
+    };
+    return userProfile?.role === categoryRoleMap[category as keyof typeof categoryRoleMap];
+  };
+
   const value = {
     user,
     session,
@@ -139,6 +186,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signOut,
+    isAdmin,
+    isSuperAdmin,
+    isCategoryAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

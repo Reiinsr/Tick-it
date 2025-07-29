@@ -136,7 +136,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "super_admin" | "it_admin" | "maintenance_admin" | "housekeeping_admin"
       ticket_category: "IT" | "Maintenance" | "Housekeeping"
       ticket_status: "New" | "In Progress" | "On Hold" | "Completed"
     }

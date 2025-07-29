@@ -26,18 +26,29 @@ const Index = () => {
   const [loadingTickets, setLoadingTickets] = useState(true);
 
   useEffect(() => {
-    if (user && userProfile) {
+    console.log('Index useEffect - user:', !!user, 'userProfile:', !!userProfile, 'loading:', loading);
+    if (user && userProfile && !loading) {
+      console.log('Fetching tickets for user:', userProfile.id, 'role:', userProfile.role);
       fetchTickets();
-      if (userProfile.role === 'admin') {
+      if (userProfile.role === 'admin' || userProfile.role === 'super_admin') {
         fetchProfiles();
       }
     }
-    // eslint-disable-next-line
-  }, [user, userProfile]);
+  }, [user, userProfile, loading]);
 
   const fetchTickets = async () => {
+    console.log('fetchTickets called');
     setLoadingTickets(true);
-    const { data, error } = await supabase
+    
+    // Don't proceed if userProfile is not available
+    if (!userProfile) {
+      console.log('No userProfile available, stopping fetchTickets');
+      setLoadingTickets(false);
+      return;
+    }
+    
+    console.log('Building query for user:', userProfile.id, 'role:', userProfile.role);
+    let query = supabase
       .from('tickets')
       .select(`
         *,
@@ -45,10 +56,51 @@ const Index = () => {
         assigned_to:assigned_to_id (id, full_name, email)
       `)
       .order('date_created', { ascending: false });
-    if (!error) {
-      setTickets(data || []);
+
+    // Filter tickets based on user role
+    if (userProfile.role === 'user') {
+      console.log('Filtering for user tickets');
+      query = query.eq('requester_id', userProfile.id);
+    } else if (userProfile.role === 'it_admin') {
+      console.log('Filtering for IT admin tickets');
+      query = query.eq('category', 'IT');
+    } else if (userProfile.role === 'maintenance_admin') {
+      console.log('Filtering for maintenance admin tickets');
+      query = query.eq('category', 'Maintenance');
+    } else if (userProfile.role === 'housekeeping_admin') {
+      console.log('Filtering for housekeeping admin tickets');
+      query = query.eq('category', 'Housekeeping');
+    } else {
+      console.log('No filtering applied (admin/super_admin)');
     }
-    setLoadingTickets(false);
+    // Super admins and regular admins can see all tickets (no additional filter)
+
+    try {
+      console.log('Executing query...');
+      const { data, error } = await query;
+      console.log('Query result - data length:', data?.length, 'error:', error);
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load tickets.',
+          variant: 'destructive',
+        });
+      } else {
+        setTickets(data || []);
+        console.log('Tickets set successfully');
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      console.log('Setting loadingTickets to false');
+      setLoadingTickets(false);
+    }
   };
 
   const fetchProfiles = async () => {
@@ -70,21 +122,26 @@ const Index = () => {
   };
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
-    const { error } = await supabase
+    console.log('Changing status for ticket:', ticketId, 'to:', newStatus, 'by user:', userProfile?.role);
+    
+    const { data, error } = await supabase
       .from('tickets')
       .update({ status: newStatus as 'New' | 'In Progress' | 'On Hold' | 'Completed' })
-      .eq('id', ticketId);
+      .eq('id', ticketId)
+      .select();
 
     if (!error) {
+      console.log('Ticket status changed successfully:', data);
       fetchTickets();
       toast({
         title: 'Success',
         description: 'Ticket status updated successfully!',
       });
     } else {
+      console.error('Error changing ticket status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update ticket status.',
+        description: `Failed to update ticket status: ${error.message}`,
         variant: 'destructive',
       });
     }
@@ -155,12 +212,18 @@ const Index = () => {
               <div className="flex items-center text-sm text-gray-600">
                 <User className="h-4 w-4 mr-1" />
                 <span className="font-medium">{userProfile?.full_name || user.email}</span>
-                {userProfile?.role === 'admin' && (
-                  <Badge variant="secondary" className="ml-2">Admin</Badge>
+                {userProfile?.role && userProfile?.role !== 'user' && (
+                  <Badge variant="secondary" className="ml-2">
+                    {userProfile.role === 'super_admin' ? 'Super Admin' :
+                     userProfile.role === 'it_admin' ? 'IT Admin' :
+                     userProfile.role === 'maintenance_admin' ? 'Maintenance Admin' :
+                     userProfile.role === 'housekeeping_admin' ? 'Housekeeping Admin' :
+                     userProfile.role === 'admin' ? 'Admin' : userProfile.role}
+                  </Badge>
                 )}
               </div>
               
-              {userProfile?.role === 'admin' && (
+              {(userProfile?.role === 'admin' || ['it_admin', 'maintenance_admin', 'housekeeping_admin'].includes(userProfile?.role)) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -215,17 +278,20 @@ const Index = () => {
                 </SelectContent>
               </Select>
               
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="IT">IT</SelectItem>
-                  <SelectItem value="Maintenance">Maintenance</SelectItem>
-                  <SelectItem value="Housekeeping">Housekeeping</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Only show category filter for regular admins and users */}
+              {(userProfile?.role === 'admin' || userProfile?.role === 'user') && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="IT">IT</SelectItem>
+                    <SelectItem value="Maintenance">Maintenance</SelectItem>
+                    <SelectItem value="Housekeeping">Housekeeping</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             
             <Button onClick={() => setShowCreateForm(true)} className="flex items-center">
@@ -284,7 +350,7 @@ const Index = () => {
                     <td className="px-4 py-2 border-b max-w-xs truncate" title={ticket.description}>{ticket.description}</td>
                     <td className="px-4 py-2 border-b">{ticket.requester?.full_name || 'Unknown'}</td>
                     <td className="px-4 py-2 border-b">
-                       {userProfile?.role === 'admin' ? (
+                       {(userProfile?.role === 'admin' || ['it_admin', 'maintenance_admin', 'housekeeping_admin'].includes(userProfile?.role)) ? (
                          <select
                            className="border rounded px-2 py-1"
                            value={ticket.status}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Test</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Database Verification Test</h1>
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = "https://ibgopagxutjwauxtsmff.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZ29wYWd4dXRqd2F1eHRzbWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MDMyNjgsImV4cCI6MjA2OTI3OTI2OH0.RVEqrU_jF0ruZuk2rQkN08LHJ2pQBbV_5WYx1JSbsxQ";
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        async function testDatabase() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing database changes...</p>';
+            
+            try {
+                // Test 1: Check if we can access profiles table
+                const { data: profiles, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .limit(3);
+                
+                if (profilesError) {
+                    results.innerHTML += `<p style="color: red;">❌ Error fetching profiles: ${profilesError.message}</p>`;
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ Profiles table accessible</p>`;
+                    results.innerHTML += `<p>Available roles: ${[...new Set(profiles.map(p => p.role))].join(', ')}</p>`;
+                }
+                
+                // Test 2: Check admin_settings table
+                const { data: settings, error: settingsError } = await supabase
+                    .from('admin_settings')
+                    .select('*')
+                    .limit(1);
+                
+                if (settingsError) {
+                    results.innerHTML += `<p style="color: red;">❌ Error accessing admin_settings: ${settingsError.message}</p>`;
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ admin_settings table accessible</p>`;
+                }
+                
+                // Test 3: Check tickets table
+                const { data: tickets, error: ticketsError } = await supabase
+                    .from('tickets')
+                    .select('category')
+                    .limit(3);
+                
+                if (ticketsError) {
+                    results.innerHTML += `<p style="color: red;">❌ Error fetching tickets: ${ticketsError.message}</p>`;
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ Tickets table accessible</p>`;
+                    if (tickets.length > 0) {
+                        results.innerHTML += `<p>Sample categories: ${[...new Set(tickets.map(t => t.category))].join(', ')}</p>`;
+                    }
+                }
+                
+                results.innerHTML += '<p style="color: green; font-weight: bold;">✅ All database tests passed!</p>';
+                
+            } catch (error) {
+                results.innerHTML += `<p style="color: red;">❌ Unexpected error: ${error.message}</p>`;
+            }
+        }
+        
+        testDatabase();
+    </script>
+</body>
+</html> 

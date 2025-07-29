@@ -7,8 +7,9 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import TicketDetail from "./pages/TicketDetail";
-import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
+import History from './pages/History';
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/ticket/:ticketId" element={<TicketDetail />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/history" element={<History />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
