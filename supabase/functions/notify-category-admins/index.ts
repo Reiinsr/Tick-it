@@ -66,7 +66,7 @@ serve(async (req) => {
           <p><strong>Date Created:</strong> ${new Date(ticketData.date_created).toLocaleString()}</p>
           <br>
           <p>Please review and assign this ticket as needed.</p>
-          <p>View ticket at: <a href="https://tick-it.space/admin">Admin Dashboard</a></p>
+          <p>View ticket at: <a href="https://www.tick-it.space/admin">Admin Dashboard</a></p>
         `
       }
 
