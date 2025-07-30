@@ -26,22 +26,71 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase
-      .from('tickets')
-      .insert({
-        title,
-        description,
-        category: category as 'IT' | 'Maintenance' | 'Housekeeping',
-        due_date: dueDate || null,
-        requester_id: userProfile.id,
-        status: 'New' as const
-      });
+    // Debug: Check authentication and user profile
+    console.log('User profile:', userProfile);
+    console.log('Supabase auth session:', await supabase.auth.getSession());
 
-    if (!error) {
+    try {
+      // Debug: Log the data being sent
+      const ticketData = {
+        title: title.trim(),
+        description: description.trim(),
+        category: category as 'IT' | 'Maintenance' | 'Housekeeping',
+        due_date: dueDate ? new Date(dueDate).toISOString() : null,
+        requester_id: userProfile.id,
+        status: 'New' as const,
+        date_created: new Date().toISOString() // Add explicit date_created
+      };
+      
+      console.log('Sending ticket data:', ticketData);
+      
+      const { data, error } = await supabase
+        .from('tickets')
+        .insert(ticketData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating ticket:', error);
+        alert('Failed to create ticket. Please try again.');
+        return;
+      }
+
+      // Call the notification function
+      try {
+        const response = await fetch('/api/notify-category-admins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ticketData: {
+              id: data.id,
+              title: data.title,
+              category: data.category,
+              description: data.description,
+              requester_name: userProfile.full_name,
+              date_created: data.date_created,
+              priority: data.priority
+            }
+          })
+        });
+
+        if (!response.ok) {
+          console.warn('Failed to send notification email');
+        }
+      } catch (notificationError) {
+        console.warn('Error sending notification:', notificationError);
+        // Don't fail the ticket creation if notification fails
+      }
+
       onSuccess();
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      alert('Failed to create ticket. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
