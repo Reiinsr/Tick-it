@@ -52,7 +52,7 @@ serve(async (req) => {
       })
     }
 
-    // Send emails to all category admins
+    // Send emails to all category admins using Resend
     const emailPromises = admins.map(async (admin) => {
       const emailData = {
         to: admin.email,
@@ -66,23 +66,38 @@ serve(async (req) => {
           <p><strong>Date Created:</strong> ${new Date(ticketData.date_created).toLocaleString()}</p>
           <br>
           <p>Please review and assign this ticket as needed.</p>
-          <p>View ticket at: <a href="${Deno.env.get('SITE_URL')}/admin">Admin Dashboard</a></p>
+          <p>View ticket at: <a href="https://tick-it.space/admin">Admin Dashboard</a></p>
         `
       }
 
-      // Use Supabase's built-in email service or integrate with a third-party service
-      const { error: emailError } = await supabase.auth.admin.sendRawEmail({
-        to: emailData.to,
-        subject: emailData.subject,
-        html: emailData.html
-      })
+      try {
+        // Send email using Resend
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'onboarding@resend.dev',
+            to: admin.email,
+            subject: emailData.subject,
+            html: emailData.html
+          })
+        })
 
-      if (emailError) {
-        console.error(`Failed to send email to ${admin.email}:`, emailError)
-        return { success: false, email: admin.email, error: emailError.message }
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error(`Failed to send email to ${admin.email}:`, errorData)
+          return { success: false, email: admin.email, error: errorData }
+        }
+
+        console.log(`Successfully sent email to ${admin.email}`)
+        return { success: true, email: admin.email }
+      } catch (error) {
+        console.error(`Error sending email to ${admin.email}:`, error)
+        return { success: false, email: admin.email, error: error.message }
       }
-
-      return { success: true, email: admin.email }
     })
 
     const results = await Promise.all(emailPromises)
