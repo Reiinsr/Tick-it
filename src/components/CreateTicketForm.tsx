@@ -36,10 +36,9 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
         title: title.trim(),
         description: description.trim(),
         category: category as 'IT' | 'Maintenance' | 'Housekeeping',
-        due_date: dueDate ? new Date(dueDate).toISOString() : null,
         requester_id: userProfile.id,
-        status: 'New' as const,
-        date_created: new Date().toISOString() // Add explicit date_created
+        status: 'New' as const
+        // Removed due_date and date_created to test if they're the issue
       };
       
       console.log('Sending ticket data:', ticketData);
@@ -70,8 +69,7 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
               category: data.category,
               description: data.description,
               requester_name: userProfile.full_name,
-              date_created: data.date_created,
-              priority: data.priority
+              date_created: data.date_created
             }
           })
         });

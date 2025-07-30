@@ -64,7 +64,6 @@ serve(async (req) => {
           <p><strong>Description:</strong> ${ticketData.description}</p>
           <p><strong>Requester:</strong> ${ticketData.requester_name}</p>
           <p><strong>Date Created:</strong> ${new Date(ticketData.date_created).toLocaleString()}</p>
-          <p><strong>Priority:</strong> ${ticketData.priority || 'Not set'}</p>
           <br>
           <p>Please review and assign this ticket as needed.</p>
           <p>View ticket at: <a href="${Deno.env.get('SITE_URL')}/admin">Admin Dashboard</a></p>
