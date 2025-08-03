@@ -28,7 +28,7 @@ const Index = () => {
   useEffect(() => {
     console.log('Index useEffect - user:', !!user, 'userProfile:', !!userProfile, 'loading:', loading);
     if (user && userProfile && !loading) {
-      console.log('Fetching tickets for user:', userProfile.id, 'role:', userProfile.role);
+      console.log('Fetching tickets for user:', userProfile.user_id, 'role:', userProfile.role);
       fetchTickets();
       if (userProfile.role === 'admin' || userProfile.role === 'super_admin') {
         fetchProfiles();
@@ -47,7 +47,7 @@ const Index = () => {
       return;
     }
     
-    console.log('Building query for user:', userProfile.id, 'role:', userProfile.role);
+    console.log('Building query for user:', userProfile.user_id, 'role:', userProfile.role);
     let query = supabase
       .from('tickets')
       .select(`
@@ -60,7 +60,7 @@ const Index = () => {
     // Filter tickets based on user role
     if (userProfile.role === 'user') {
       console.log('Filtering for user tickets');
-      query = query.eq('requester_id', userProfile.id);
+      query = query.eq('requester_id', userProfile.user_id);
     } else if (userProfile.role === 'it_admin') {
       console.log('Filtering for IT admin tickets');
       query = query.eq('category', 'IT');
@@ -198,50 +198,31 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Tag className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">Tick-it</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Tick-it</h1>
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="flex items-center text-sm text-gray-600">
-                <User className="h-4 w-4 mr-1" />
-                <span className="font-medium">{userProfile?.full_name || user.email}</span>
-                {userProfile?.role && userProfile?.role !== 'user' && (
-                  <Badge variant="secondary" className="ml-2">
-                    {userProfile.role === 'super_admin' ? 'Super Admin' :
-                     userProfile.role === 'it_admin' ? 'IT Admin' :
-                     userProfile.role === 'maintenance_admin' ? 'Maintenance Admin' :
-                     userProfile.role === 'housekeeping_admin' ? 'Housekeeping Admin' :
-                     userProfile.role === 'admin' ? 'Admin' : userProfile.role}
-                  </Badge>
-                )}
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-700">{userProfile?.full_name || userProfile?.email}</span>
+                <Badge variant="secondary">{userProfile?.role}</Badge>
               </div>
               
-              {(userProfile?.role === 'admin' || ['it_admin', 'maintenance_admin', 'housekeeping_admin'].includes(userProfile?.role)) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAdminSettings}
-                  className="flex items-center"
-                >
-                  <Settings className="h-4 w-4 mr-1" />
+              {userProfile?.role === 'admin' || userProfile?.role === 'super_admin' ? (
+                <Button variant="outline" size="sm" onClick={handleAdminSettings}>
+                  <Settings className="h-4 w-4 mr-2" />
                   Admin
                 </Button>
-              )}
+              ) : null}
               
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSignOut}
-                className="flex items-center"
-              >
-                <LogOut className="h-4 w-4 mr-1" />
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </Button>
             </div>
@@ -250,23 +231,30 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters and Search */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Controls */}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="flex items-center space-x-4">
+              <Button onClick={() => setShowCreateForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Ticket
+              </Button>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search tickets..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full sm:w-64"
                 />
               </div>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -278,102 +266,60 @@ const Index = () => {
                 </SelectContent>
               </Select>
               
-              {/* Only show category filter for regular admins and users */}
-              {(userProfile?.role === 'admin' || userProfile?.role === 'user') && (
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="IT">IT</SelectItem>
-                    <SelectItem value="Maintenance">Maintenance</SelectItem>
-                    <SelectItem value="Housekeeping">Housekeeping</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="IT">IT</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
+                  <SelectItem value="Housekeeping">Housekeeping</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
-            <Button onClick={() => setShowCreateForm(true)} className="flex items-center">
-              <Plus className="h-4 w-4 mr-2" />
-              New Ticket
-            </Button>
           </div>
         </div>
 
-        {/* Tickets List */}
-        {loadingTickets ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading tickets...</p>
-          </div>
-        ) : filteredTickets.length === 0 ? (
-          <div className="text-center py-12">
-            <Tag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' 
-                ? 'No tickets match your filters' 
-                : 'No tickets yet'}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Get started by creating your first ticket'}
-            </p>
-            {(!searchTerm && statusFilter === 'all' && categoryFilter === 'all') && (
-              <Button onClick={() => setShowCreateForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create First Ticket
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border rounded shadow text-sm">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 border-b">Title</th>
-                  <th className="px-4 py-2 border-b">Category</th>
-                  <th className="px-4 py-2 border-b">Description</th>
-                  <th className="px-4 py-2 border-b">Requester</th>
-                  <th className="px-4 py-2 border-b">Status</th>
-                  <th className="px-4 py-2 border-b">Assigned To</th>
-                  <th className="px-4 py-2 border-b">Date Created</th>
-                  <th className="px-4 py-2 border-b">Due Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTickets.map((ticket) => (
-                  <tr key={ticket.id}>
-                    <td className="px-4 py-2 border-b font-medium">{ticket.title}</td>
-                    <td className="px-4 py-2 border-b">{ticket.category}</td>
-                    <td className="px-4 py-2 border-b max-w-xs truncate" title={ticket.description}>{ticket.description}</td>
-                    <td className="px-4 py-2 border-b">{ticket.requester?.full_name || 'Unknown'}</td>
-                    <td className="px-4 py-2 border-b">
-                       {(userProfile?.role === 'admin' || ['it_admin', 'maintenance_admin', 'housekeeping_admin'].includes(userProfile?.role)) ? (
-                         <select
-                           className="border rounded px-2 py-1"
-                           value={ticket.status}
-                           onChange={e => handleStatusChange(ticket.id, e.target.value)}
-                         >
-                           <option value="New">New</option>
-                           <option value="In Progress">In Progress</option>
-                           <option value="On Hold">On Hold</option>
-                           <option value="Completed">Completed</option>
-                         </select>
-                       ) : (
-                         ticket.status
-                       )}
-                     </td>
-                    <td className="px-4 py-2 border-b">{ticket.assigned_to?.full_name || 'Unassigned'}</td>
-                    <td className="px-4 py-2 border-b">{ticket.date_created ? new Date(ticket.date_created).toLocaleDateString() : ''}</td>
-                    <td className="px-4 py-2 border-b">{ticket.due_date ? new Date(ticket.due_date).toLocaleDateString() : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* Tickets */}
+        <div className="space-y-6">
+          {loadingTickets ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading tickets...</p>
+            </div>
+          ) : filteredTickets.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <Tag className="h-12 w-12 mx-auto" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
+              <p className="text-gray-500 mb-4">
+                {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'
+                  ? 'Try adjusting your filters or search terms.'
+                  : 'Get started by creating your first ticket.'}
+              </p>
+              {!searchTerm && statusFilter === 'all' && categoryFilter === 'all' && (
+                <Button onClick={() => setShowCreateForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Ticket
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-6">
+              {filteredTickets.map((ticket) => (
+                <TicketCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  userProfile={userProfile}
+                  onStatusChange={handleStatusChange}
+                  onAssign={handleAssign}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </main>
 
       <Footer />
