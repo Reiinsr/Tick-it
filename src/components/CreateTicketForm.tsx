@@ -33,22 +33,14 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
       return;
     }
 
-    // Debug: Check authentication and user profile
-    console.log('User profile:', userProfile);
-    console.log('Supabase auth session:', await supabase.auth.getSession());
-
     try {
-      // Debug: Log the data being sent
       const ticketData = {
         title: title.trim(),
         description: description.trim(),
         category: category as 'IT' | 'Maintenance' | 'Housekeeping',
-        requester_id: userProfile.user_id, // Fixed: use user_id instead of id
+        requester_id: userProfile.user_id,
         status: 'New' as const
-        // Removed due_date and date_created to test if they're the issue
       };
-      
-      console.log('Sending ticket data:', ticketData);
       
       const { data, error } = await supabase
         .from('tickets')
@@ -62,15 +54,10 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
         return;
       }
 
-      // Call the notification function
+      // Call the notification function using Supabase client
       try {
-        const response = await fetch('https://ibgopagxutjwauxtsmff.supabase.co/functions/v1/notify-category-admins', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZ29wYWd4dXRqd2F1eHRzbWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MDMyNjgsImV4cCI6MjA2OTI3OTI2OH0.RVEqrU_jF0ruZuk2rQkN08LHJ2pQBbV_5WYx1JSbsxQ`
-          },
-          body: JSON.stringify({
+        const { data: notificationData, error: notificationError } = await supabase.functions.invoke('notify-category-admins', {
+          body: {
             ticketData: {
               id: data.id,
               title: data.title,
@@ -79,11 +66,13 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
               requester_name: userProfile.full_name,
               date_created: data.date_created
             }
-          })
+          }
         });
 
-        if (!response.ok) {
-          console.warn('Failed to send notification email');
+        if (notificationError) {
+          console.warn('Failed to send notification email:', notificationError);
+        } else {
+          console.log('Notification sent successfully:', notificationData);
         }
       } catch (notificationError) {
         console.warn('Error sending notification:', notificationError);
