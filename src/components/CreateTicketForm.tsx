@@ -36,7 +36,7 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
         title: title.trim(),
         description: description.trim(),
         category: category as 'IT' | 'Maintenance' | 'Housekeeping',
-        requester_id: userProfile.id,
+        requester_id: userProfile.user_id, // Fixed: use user_id instead of id
         status: 'New' as const
         // Removed due_date and date_created to test if they're the issue
       };
@@ -161,6 +161,12 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
           </CardContent>
         </Card>
       </div>
