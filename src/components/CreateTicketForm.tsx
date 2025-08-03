@@ -99,6 +99,10 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
     }
   };
 
+  const handleCategoryChange = (value: string) => {
+    setCategory(value as 'IT' | 'Maintenance' | 'Housekeeping' | '');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
@@ -128,7 +132,7 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
 
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={(value: string) => setCategory(value as 'IT' | 'Maintenance' | 'Housekeeping' | '')} required>
+                <Select value={category} onValueChange={handleCategoryChange} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -170,11 +174,6 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
               </div>
             </form>
           </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
         </Card>
       </div>
     </div>
