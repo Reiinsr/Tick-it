@@ -26,6 +26,13 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
     e.preventDefault();
     setLoading(true);
 
+    // Validate that category is selected
+    if (!category) {
+      alert('Please select a category');
+      setLoading(false);
+      return;
+    }
+
     // Debug: Check authentication and user profile
     console.log('User profile:', userProfile);
     console.log('Supabase auth session:', await supabase.auth.getSession());
@@ -57,10 +64,11 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
 
       // Call the notification function
       try {
-        const response = await fetch('/api/notify-category-admins', {
+        const response = await fetch('https://ibgopagxutjwauxtsmff.supabase.co/functions/v1/notify-category-admins', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZ29wYWd4dXRqd2F1eHRzbWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MDMyNjgsImV4cCI6MjA2OTI3OTI2OH0.RVEqrU_jF0ruZuk2rQkN08LHJ2pQBbV_5WYx1JSbsxQ`
           },
           body: JSON.stringify({
             ticketData: {
@@ -120,7 +128,7 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
 
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory} required>
+                <Select value={category} onValueChange={(value: string) => setCategory(value as 'IT' | 'Maintenance' | 'Housekeeping' | '')} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -167,7 +175,6 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
     </div>
   );
 };
-          </CardContent>
         </Card>
       </div>
     </div>
