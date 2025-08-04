@@ -21,6 +21,53 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
   const [category, setCategory] = useState<'IT' | 'Maintenance' | 'Housekeeping' | ''>('');
   const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+
+  const ensureUserProfile = async () => {
+    if (!user) {
+      throw new Error('No authenticated user found');
+    }
+
+    // If we already have a userProfile, return it
+    if (userProfile && userProfile.user_id) {
+      return userProfile;
+    }
+
+    // Check if profile exists
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('Error fetching profile:', fetchError);
+      throw new Error('Failed to check user profile');
+    }
+
+    if (existingProfile) {
+      return existingProfile;
+    }
+
+    // Create profile if it doesn't exist
+    const { data: newProfile, error: createError } = await supabase
+      .from('profiles')
+      .insert({
+        user_id: user.id,
+        email: user.email || '',
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
+        role: 'user'
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Error creating profile:', createError);
+      throw new Error('Failed to create user profile');
+    }
+
+    return newProfile;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +81,14 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
     }
 
     try {
+      // Ensure user has a profile
+      const profile = await ensureUserProfile();
+
       const ticketData = {
         title: title.trim(),
         description: description.trim(),
         category: category as 'IT' | 'Maintenance' | 'Housekeeping',
-        requester_id: userProfile.user_id,
+        requester_id: profile.user_id,
         status: 'New' as const
       };
       
@@ -63,7 +113,7 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
               title: data.title,
               category: data.category,
               description: data.description,
-              requester_name: userProfile.full_name,
+              requester_name: profile.full_name,
               date_created: data.date_created
             }
           }
@@ -82,7 +132,7 @@ export const CreateTicketForm = ({ onCancel, onSuccess, userProfile }: CreateTic
       onSuccess();
     } catch (error) {
       console.error('Error creating ticket:', error);
-      alert('Failed to create ticket. Please try again.');
+      alert(`Failed to create ticket: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

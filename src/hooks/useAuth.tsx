@@ -63,7 +63,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (!error && data) {
+      if (error) {
+        console.error('Error fetching profile:', error);
+        // Try to create a profile if it doesn't exist
+        if (error.code === 'PGRST116') { // No rows returned
+          await createUserProfile(userId);
+          return;
+        }
+        return;
+      }
+
+      if (data) {
         setUserProfile(data);
         
         // Only update admin role if user is first user and no admin exists
@@ -87,9 +97,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }, 100);
           }
         }
+      } else {
+        // Profile doesn't exist, create one
+        await createUserProfile(userId);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  const createUserProfile = async (userId: string) => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: userId,
+          email: user.user.email || '',
+          full_name: user.user.user_metadata?.full_name || user.user.email?.split('@')[0] || 'Unknown User',
+          role: 'user'
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        return;
+      }
+
+      setUserProfile(newProfile);
+    } catch (error) {
+      console.error('Error creating user profile:', error);
     }
   };
 
