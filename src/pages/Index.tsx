@@ -124,6 +124,22 @@ const Index = () => {
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     console.log('Changing status for ticket:', ticketId, 'to:', newStatus, 'by user:', userProfile?.role);
     
+    // Check if user has permission to change ticket status
+    const canChangeStatus = userProfile?.role === 'admin' || 
+                           userProfile?.role === 'super_admin' || 
+                           userProfile?.role === 'it_admin' || 
+                           userProfile?.role === 'maintenance_admin' || 
+                           userProfile?.role === 'housekeeping_admin';
+    
+    if (!canChangeStatus) {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only admins and category admins can change ticket status.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     const { data, error } = await supabase
       .from('tickets')
       .update({ status: newStatus as 'New' | 'In Progress' | 'On Hold' | 'Completed' })

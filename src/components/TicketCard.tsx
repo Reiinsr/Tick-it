@@ -25,7 +25,7 @@ interface TicketCardProps {
   };
   onStatusChange: (ticketId: string, newStatus: string) => void;
   onAssign?: (ticketId: string) => void;
-  isAdmin: boolean;
+  userProfile: any;
 }
 
 const statusColors = {
@@ -41,7 +41,7 @@ const categoryColors = {
   'Housekeeping': 'bg-green-100 text-green-800'
 };
 
-export const TicketCard = ({ ticket, onStatusChange, onAssign, isAdmin }: TicketCardProps) => {
+export const TicketCard = ({ ticket, onStatusChange, onAssign, userProfile }: TicketCardProps) => {
   const navigate = useNavigate();
 
   const getNextStatus = (currentStatus: string) => {
@@ -55,6 +55,13 @@ export const TicketCard = ({ ticket, onStatusChange, onAssign, isAdmin }: Ticket
   };
 
   const canProgress = ticket.status !== 'Completed';
+  
+  // Check if user can change ticket status (only admins and category admins)
+  const canChangeStatus = userProfile?.role === 'admin' || 
+                         userProfile?.role === 'super_admin' || 
+                         userProfile?.role === 'it_admin' || 
+                         userProfile?.role === 'maintenance_admin' || 
+                         userProfile?.role === 'housekeeping_admin';
 
   const handleCardClick = () => {
     navigate(`/ticket/${ticket.id}`);
@@ -123,7 +130,7 @@ export const TicketCard = ({ ticket, onStatusChange, onAssign, isAdmin }: Ticket
         </div>
         
         <div className="flex gap-2 mt-4">
-          {canProgress && (
+          {canProgress && canChangeStatus && (
             <Button
               size="sm"
               onClick={(e) => {

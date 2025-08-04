@@ -18,7 +18,7 @@ const TABS = [
 
 const Admin = () => {
   const navigate = useNavigate();
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, loading, refreshUserProfile } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -105,7 +105,15 @@ const Admin = () => {
     } else {
       console.log('Role changed successfully:', data);
       alert(`Role changed to ${newRole} successfully!`);
-      fetchProfiles(); // Refresh the profiles list
+      
+      // If the user changed their own role, refresh their profile
+      if (userId === user?.id) {
+        console.log('User changed their own role, refreshing profile...');
+        await refreshUserProfile();
+      }
+      
+      // Refresh the profiles list
+      fetchProfiles();
     }
   };
 

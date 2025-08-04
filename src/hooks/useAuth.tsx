@@ -10,6 +10,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, isAdmin?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
   isAdmin: (userProfile: any) => boolean;
   isSuperAdmin: (userProfile: any) => boolean;
   isCategoryAdmin: (userProfile: any, category: string) => boolean;
@@ -201,6 +202,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshUserProfile = async () => {
+    if (user) {
+      await fetchUserProfile(user.id);
+    }
+  };
+
   const isAdmin = (userProfile: any) => {
     return userProfile?.role === 'admin';
   };
@@ -226,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signOut,
+    refreshUserProfile,
     isAdmin,
     isSuperAdmin,
     isCategoryAdmin,
