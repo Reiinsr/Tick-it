@@ -92,17 +92,52 @@ const Admin = () => {
 
   const handleRoleChange = async (userId, newRole) => {
     console.log('Changing role for user:', userId, 'to:', newRole);
+    console.log('Current user ID:', user?.id);
+    console.log('Current user role:', userProfile?.role);
     
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('user_id', userId)
-      .select();
+    try {
+      // First, check if the user exists and get their current role
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('profiles')
+        .select('user_id, email, role')
+        .eq('user_id', userId)
+        .single();
 
-    if (error) {
-      console.error('Error changing role:', error);
-      alert(`Failed to change role: ${error.message}`);
-    } else {
+      if (fetchError) {
+        console.error('Error fetching user:', fetchError);
+        alert(`Failed to fetch user: ${fetchError.message}`);
+        return;
+      }
+
+      console.log('Current user data:', currentUser);
+      
+      // Check if the role is already set to the target role
+      if (currentUser.role === newRole) {
+        alert(`User already has role: ${newRole}`);
+        return;
+      }
+
+      // Perform the role update
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('user_id', userId)
+        .select();
+
+      if (error) {
+        console.error('Error changing role:', error);
+        alert(`Failed to change role: ${error.message}\n\nError details: ${JSON.stringify(error, null, 2)}`);
+        return;
+      }
+
+      console.log('Role change response:', data);
+      
+      if (!data || data.length === 0) {
+        console.error('No rows were updated');
+        alert(`No rows were updated. This might be due to:\n1. User doesn't exist\n2. Permission denied\n3. Role is already set to ${newRole}`);
+        return;
+      }
+
       console.log('Role changed successfully:', data);
       alert(`Role changed to ${newRole} successfully!`);
       
@@ -113,7 +148,27 @@ const Admin = () => {
       }
       
       // Refresh the profiles list
-      fetchProfiles();
+      await fetchProfiles();
+      
+      // Verify the change was actually made
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+        
+      if (verifyError) {
+        console.error('Error verifying role change:', verifyError);
+      } else {
+        console.log('Verified role change:', verifyData);
+        if (verifyData.role !== newRole) {
+          alert(`Warning: Role change may not have been applied correctly. Expected: ${newRole}, Actual: ${verifyData.role}`);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Unexpected error in handleRoleChange:', error);
+      alert(`Unexpected error: ${error.message}`);
     }
   };
 
