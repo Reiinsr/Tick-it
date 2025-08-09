@@ -323,16 +323,111 @@ const Index = () => {
               )}
             </div>
           ) : (
-            <div className="grid gap-6">
-              {filteredTickets.map((ticket) => (
-                <TicketCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  userProfile={userProfile}
-                  onStatusChange={handleStatusChange}
-                  onAssign={handleAssign}
-                />
-              ))}
+            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ticket
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Requester
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date Created
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredTickets.map((ticket) => (
+                      <tr key={ticket.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/ticket/${ticket.id}`)}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 line-clamp-1">
+                              {ticket.title}
+                            </div>
+                            {ticket.description && (
+                              <div className="text-sm text-gray-500 line-clamp-1">
+                                {ticket.description}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge 
+                            variant="outline" 
+                            className={`${
+                              ticket.category === 'IT' ? 'bg-purple-100 text-purple-800' :
+                              ticket.category === 'Maintenance' ? 'bg-blue-100 text-blue-800' :
+                              'bg-green-100 text-green-800'
+                            } border-0`}
+                          >
+                            {ticket.category}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge 
+                            className={`${
+                              ticket.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                              ticket.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                              ticket.status === 'On Hold' ? 'bg-orange-100 text-orange-800' :
+                              'bg-green-100 text-green-800'
+                            } border-0`}
+                          >
+                            {ticket.status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {ticket.requester?.full_name || 'Unknown'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {format(new Date(ticket.date_created), 'MMM d, yyyy')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            {ticket.status !== 'Completed' && userProfile?.role && ['admin', 'super_admin', 'it_admin', 'maintenance_admin', 'housekeeping_admin'].includes(userProfile.role) && (
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const nextStatus = ticket.status === 'New' ? 'In Progress' : 
+                                                   ticket.status === 'In Progress' ? 'Completed' : 
+                                                   ticket.status === 'On Hold' ? 'In Progress' : 'Completed';
+                                  handleStatusChange(ticket.id, nextStatus);
+                                }}
+                              >
+                                {ticket.status === 'New' ? 'Start' : 
+                                 ticket.status === 'In Progress' ? 'Complete' : 
+                                 ticket.status === 'On Hold' ? 'Resume' : 'Complete'}
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/ticket/${ticket.id}`);
+                              }}
+                            >
+                              View
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
